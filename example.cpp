@@ -1,4 +1,5 @@
 #include "pythonengine.h"
+#include <utility>
 
 int main() {
 	static PythonEngine& handle = PythonEngine::getInstance();
@@ -8,6 +9,6 @@ int main() {
 	std::vector<int> test = { 1,2,3 };
 	std::vector<std::vector<int>> test2 = { test, test, test };
 	PyObject* p_return = handle.CallFunction("my_function", "example", test2, 3.14, true, "testing");
-	auto obj = PythonEngine::PyType_AsVector<std::string>(p_return);
+	auto obj = std::move(PythonEngine::PyType_AsVector<std::string>(p_return));
 	return 0;
 }

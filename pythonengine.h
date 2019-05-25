@@ -10,17 +10,16 @@ public:
 	~PythonEngine();
 	static PythonEngine& getInstance();
 	enum Errors : int {
-		PythonHomeNotFound = 1,
+		PythonSuccess = 0,
+		PythonHomeNotFound,
 		PythonInitializeError,
 		PythonVersionError,
 		PythonLoadExternalModuleError,
-		PythonLoadFunctionError,
-		PythonAppendModuleError
+		PythonLoadFunctionError
 	};
-	static constexpr int PythonSuccess = 0;
-	int Initialize();
-	int LoadModule(std::string&& module_name);
-	int LoadFunction(std::string&& function_name, const std::string& module_name);
+	PyStatus Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules = std::vector<std::pair<std::string, PyObject* (*)(void)>>());
+	PyStatus LoadModule(std::string&& module_name);
+	PyStatus LoadFunction(std::string&& function_name, const std::string& module_name);
 	template<typename ... T>
 	PyObject* CallFunction(const std::string& function_name, const std::string& module_name, const T&... args) {
 		std::vector<Any> vec = { args... };
@@ -30,7 +29,6 @@ public:
 		PyObject* p_func = p_modules[module_name].p_functions[function_name];
 		return PyObject_CallObject(p_func, p_args);
 	};
-	int AppendModule(const std::string& module_name, PyObject* (*initfunc)(void));
 
 	template<typename T>
 	static T PyType_AsType(PyObject* py_data) {
@@ -72,25 +70,6 @@ public:
 		return vec;
 	};
 
-private:
-	PythonEngine() {};
-	PythonEngine(PythonEngine const&) = delete;
-	void operator=(PythonEngine const&) = delete;
-	PythonEngine(PythonEngine &&) = delete;
-	void operator=(PythonEngine &&) = delete;
-
-	struct Any {
-		PyObject* p_data;
-		template<typename T>
-		Any(T&& data) {
-			p_data = PyType_FromType(std::forward<T>(data));
-		}
-	};
-	template<typename>
-	struct is_std_vector : std::false_type {};
-	template<typename T>
-	struct is_std_vector<std::vector<T>> : std::true_type {};
-
 	static PyObject* PyType_FromType(const double data) {
 		return PyFloat_FromDouble(data);
 	};
@@ -113,6 +92,25 @@ private:
 			PyList_SetItem(p_list, i, PyType_FromType(data[i]));
 		return p_list;
 	}
+
+private:
+	PythonEngine();
+	PythonEngine(PythonEngine const&) = delete;
+	void operator=(PythonEngine const&) = delete;
+	PythonEngine(PythonEngine &&) = delete;
+	void operator=(PythonEngine &&) = delete;
+
+	struct Any {
+		PyObject* p_data;
+		template<typename T>
+		Any(T&& data) {
+			p_data = PyType_FromType(std::forward<T>(data));
+		}
+	};
+	template<typename>
+	struct is_std_vector : std::false_type {};
+	template<typename T>
+	struct is_std_vector<std::vector<T>> : std::true_type {};
 
 	struct Module {
 		PyObject* module_handle;

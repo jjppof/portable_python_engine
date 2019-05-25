@@ -3,6 +3,10 @@
 #include "Shlwapi.h"
 #include <cstdlib>
 
+PythonEngine::PythonEngine() {
+	Py_SetProgramName(L"python_trimming");
+}
+
 PythonEngine::~PythonEngine() {
 	Py_Finalize();
 }
@@ -12,7 +16,7 @@ PythonEngine & PythonEngine::getInstance() {
 	return instance;
 }
 
-int PythonEngine::Initialize() {
+PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules) {
 	if (PathFileExistsA("C:\\Python36\\python.exe"))
 		Py_SetPythonHome(L"C:\\Python36");
 	else if (PathFileExistsA("C:\\Python 3.6\\python.exe"))
@@ -26,8 +30,12 @@ int PythonEngine::Initialize() {
 	else
 		return PythonHomeNotFound;
 
-	Py_SetProgramName(L"python_trimming");
+	for (auto& module : modules)
+		PyImport_AppendInittab(module.first.c_str(), module.second);
+
 	Py_Initialize();
+	wchar_t* argv[1] = { L"" };
+	PySys_SetArgv(1, argv);
 	if (Py_IsInitialized() == 0)
 		return PythonInitializeError;
 
@@ -43,7 +51,7 @@ int PythonEngine::Initialize() {
 	return PythonSuccess;
 }
 
-int PythonEngine::LoadModule(std::string&& module_name) {
+PythonEngine::PyStatus PythonEngine::LoadModule(std::string&& module_name) {
 	PyObject* p_module = PyImport_ImportModule(module_name.c_str());
 	if (p_module == nullptr)
 		return PythonLoadExternalModuleError;
@@ -53,17 +61,10 @@ int PythonEngine::LoadModule(std::string&& module_name) {
 	return PythonSuccess;
 }
 
-int PythonEngine::LoadFunction(std::string&& function_name, const std::string& module_name) {
+PythonEngine::PyStatus PythonEngine::LoadFunction(std::string&& function_name, const std::string& module_name) {
 	PyObject* p_func = PyObject_GetAttrString(p_modules[module_name].module_handle, function_name.c_str());
 	if (p_func == nullptr)
 		return PythonLoadFunctionError;
 	p_modules[module_name].p_functions.emplace(std::move(function_name), p_func);
-	return PythonSuccess;
-}
-
-int PythonEngine::AppendModule(const std::string& module_name, PyObject* (*init_func)(void)) {
-	int initResult = PyImport_AppendInittab(module_name.c_str(), init_func);
-	if (initResult == -1)
-		return PythonAppendModuleError;
 	return PythonSuccess;
 }
