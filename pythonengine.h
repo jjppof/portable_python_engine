@@ -32,27 +32,15 @@ public:
 
 	template<typename T>
 	static T PyType_AsType(PyObject* py_data) {
+		if constexpr (std::is_same_v<T, double>)
+			return PyFloat_AsDouble(py_data);
+		else if constexpr (std::is_same_v<T, bool>)
+			return static_cast<bool>(PyObject_IsTrue(py_data));
+		else if constexpr (std::is_same_v<T, int>)
+			return static_cast<int>(PyLong_AsLong(py_data));
+		else if constexpr (std::is_same_v<T, char*> || std::is_same_v<T, std::string>)
+			return PyUnicode_AsUTF8(py_data);
 		return T();
-	};
-	template<>
-	static double PyType_AsType<double>(PyObject* py_data) {
-		return PyFloat_AsDouble(py_data);
-	};
-	template<>
-	static bool PyType_AsType<bool>(PyObject* py_data) {
-		return static_cast<bool>(PyObject_IsTrue(py_data));
-	};
-	template<>
-	static int PyType_AsType<int>(PyObject* py_data) {
-		return static_cast<int>(PyLong_AsLong(py_data));
-	};
-	template<>
-	static char* PyType_AsType<char*>(PyObject* py_data) {
-		return PyUnicode_AsUTF8(py_data);
-	};
-	template<>
-	static std::string PyType_AsType<std::string>(PyObject* py_data) {
-		return PyUnicode_AsUTF8(py_data);
 	};
 	template<typename T>
 	static std::vector<T> PyType_AsVector(PyObject* py_data) {
@@ -70,21 +58,21 @@ public:
 		return vec;
 	};
 
-	static PyObject* PyType_FromType(const double data) {
-		return PyFloat_FromDouble(data);
-	};
-	static PyObject* PyType_FromType(const bool data) {
-		return PyBool_FromLong(static_cast<long>(data));
-	};
-	static PyObject* PyType_FromType(const int data) {
-		return PyLong_FromLong(static_cast<long>(data));
-	};
-	static PyObject* PyType_FromType(const char* data) {
-		return (PyObject*)(PyUnicode_FromString(data));
-	};
-	static PyObject* PyType_FromType(const std::string& data) {
-		return (PyObject*)(PyUnicode_FromString(data.c_str()));
-	};
+	template<typename T>
+	static PyObject* PyType_FromType(T data) {
+		using T_ = std::remove_reference_t<std::remove_cv_t<T>>;
+		if constexpr (std::is_same_v<T_, double>)
+			return PyFloat_FromDouble(data);
+		else if constexpr (std::is_same_v<T_, bool>)
+			return PyBool_FromLong(static_cast<long>(data));
+		else if constexpr (std::is_same_v<T_, int>)
+			return PyLong_FromLong(static_cast<long>(data));
+		else if constexpr (std::is_same_v<T_, char*>)
+			return (PyObject*)(PyUnicode_FromString(data));
+		else if constexpr (std::is_same_v<T_, std::string>)
+			return (PyObject*)(PyUnicode_FromString(data.c_str()));
+		return Py_None;
+	}
 	template<typename T>
 	static PyObject* PyType_FromType(std::vector<T> data) {
 		PyObject* p_list = PyList_New(data.size());
