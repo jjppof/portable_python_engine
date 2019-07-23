@@ -47,7 +47,7 @@ public:
 	template<typename T>
 	static std::vector<T> PyType_AsVector(PyObject* py_data) {
 		std::vector<T> vec;
-		size_t size = PyList_Size(py_data);
+		const size_t size = PyList_Size(py_data);
 		vec.reserve(size);
 		PyObject* item;
 		for (int i = 0; i < size; ++i) {
