@@ -15,7 +15,8 @@ public:
 		PythonInitializeError,
 		PythonVersionError,
 		PythonLoadExternalModuleError,
-		PythonLoadFunctionError
+		PythonLoadFunctionError,
+		PythonAlreadyInitialized
 	};
 	PyStatus Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules = std::vector<std::pair<std::string, PyObject* (*)(void)>>());
 	PyStatus LoadModule(std::string&& module_name);
