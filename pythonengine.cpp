@@ -3,7 +3,7 @@
 #include <cstdlib>
 
 PythonEngine::PythonEngine() {
-	Py_SetProgramName(L"python_trimming");
+	Py_SetProgramName(L"python_engine");
 }
 
 PythonEngine::~PythonEngine() {
