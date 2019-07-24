@@ -7,7 +7,8 @@ PythonEngine::PythonEngine() {
 }
 
 PythonEngine::~PythonEngine() {
-	Py_Finalize();
+	if (Py_IsInitialized())
+		Py_Finalize();
 }
 
 PythonEngine & PythonEngine::getInstance() {
