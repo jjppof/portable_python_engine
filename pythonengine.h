@@ -5,12 +5,21 @@
 #include <map>
 #include <vector>
 #include <type_traits>
+#include <any>
+
+class PythonEngine;
+
+template<class T>
+std::any operator+(std::any a, T&& b) {
+	PyList_Append(std::any_cast<PyObject*>(a), PythonEngine::PyType_FromType(std::forward<T>(b)));
+	return a;
+}
 
 class PythonEngine {
 public:
 	~PythonEngine();
 	static PythonEngine& getInstance();
-	enum Errors : int {
+	enum PyStatus : int {
 		PythonSuccess = 0,
 		PythonHomeNotFound,
 		PythonInitializeError,
@@ -24,12 +33,10 @@ public:
 	PyStatus LoadFunction(std::string&& function_name, const std::string& module_name);
 	template<typename ... T>
 	PyObject* CallFunction(const std::string& function_name, const std::string& module_name, const T&... args) {
-		std::vector<Any> vec = { args... };
-		PyObject* p_args = PyTuple_New(vec.size());
-		for (int i = 0; i < vec.size(); ++i)
-			PyTuple_SetItem(p_args, i, vec[i].p_data);
+		PyObject* p_args = PyList_New(0);
+		(std::any(p_args) + ... + args);
 		PyObject* p_func = p_modules[module_name].p_functions[function_name];
-		return PyObject_CallObject(p_func, p_args);
+		return PyObject_CallObject(p_func, PyList_AsTuple(p_args));
 	};
 
 	template<typename T>
@@ -69,7 +76,7 @@ public:
 			return PyBool_FromLong(static_cast<long>(data));
 		else if constexpr (std::is_same_v<T_, int>)
 			return PyLong_FromLong(static_cast<long>(data));
-		else if constexpr (std::is_same_v<T_, char*>)
+		else if constexpr (std::is_same_v<T_, char*> || std::is_same_v<T_, const char*>)
 			return (PyObject*)(PyUnicode_FromString(data));
 		else if constexpr (std::is_same_v<T_, std::string>)
 			return (PyObject*)(PyUnicode_FromString(data.c_str()));
@@ -90,13 +97,6 @@ private:
 	PythonEngine(PythonEngine &&) = delete;
 	void operator=(PythonEngine &&) = delete;
 
-	struct Any {
-		PyObject* p_data;
-		template<typename T>
-		Any(T&& data) {
-			p_data = PyType_FromType(std::forward<T>(data));
-		}
-	};
 	template<typename>
 	struct is_std_vector : std::false_type {};
 	template<typename T>
