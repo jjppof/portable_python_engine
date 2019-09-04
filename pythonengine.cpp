@@ -2,21 +2,27 @@
 #include <filesystem>
 #include <cstdlib>
 
-PythonEngine::PythonEngine() {
+#define PYTHON_HOME "C:\\Python36\\"
+#define WIDER2(x) L ## x
+#define WIDER(x) WIDER2(x)
+#define BIN_EXT ".exe"
+#define PY_VERSION "3.6"
+
+PythonEngine::PythonEngine() noexcept {
 	Py_SetProgramName(L"python_engine");
 }
 
-PythonEngine::~PythonEngine() {
+PythonEngine::~PythonEngine() noexcept {
 	if (Py_IsInitialized())
 		Py_Finalize();
 }
 
-PythonEngine & PythonEngine::getInstance() {
+PythonEngine& PythonEngine::getInstance() noexcept {
 	static PythonEngine instance;
 	return instance;
 }
 
-PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules) {
+PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules) noexcept {
 	if (Py_IsInitialized()) {
 		for (auto& module : modules) {
 			PyImport_AddModule(module.first.c_str());
@@ -28,16 +34,8 @@ PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::strin
 		return PythonAlreadyInitialized;
 	}
 
-	if (std::filesystem::exists("C:\\Python36\\python.exe"))
-		Py_SetPythonHome(L"C:\\Python36");
-	else if (std::filesystem::exists("C:\\Python 3.6\\python.exe"))
-		Py_SetPythonHome(L"C:\\Python 3.6");
-	else if (std::filesystem::exists(std::getenv("PYTHONHOME")))
-		Py_SetPythonHome(_wgetenv(L"PYTHONHOME"));
-	else if (std::filesystem::exists("C:\\Python3\\python.exe"))
-		Py_SetPythonHome(L"C:\\Python3");
-	else if (std::filesystem::exists("C:\\Python\\python.exe"))
-		Py_SetPythonHome(L"C:\\Python");
+	if (std::filesystem::exists(PYTHON_HOME "python" BIN_EXT))
+		Py_SetPythonHome(WIDER(PYTHON_HOME));
 	else
 		return PythonHomeNotFound;
 
@@ -54,15 +52,13 @@ PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::strin
 	if (std::string(pyVersion).rfind("3.6", 0) != 0)
 		return PythonVersionError;
 
-	PyRun_SimpleString(
-		"import os, sys \n"
-		"sys.path.append(os.getcwd()) \n"
-	);
+	PyObject* path_list = PySys_GetObject("path");
+	PyList_Append(path_list, PythonEngine::PyType_FromType(std::filesystem::current_path().c_str()));
 
 	return PythonSuccess;
 }
 
-PythonEngine::PyStatus PythonEngine::LoadModule(std::string&& module_name) {
+PythonEngine::PyStatus PythonEngine::LoadModule(std::string&& module_name) noexcept {
 	PyObject* p_module = PyImport_ImportModule(module_name.c_str());
 	if (p_module == nullptr)
 		return PythonLoadExternalModuleError;
@@ -72,7 +68,7 @@ PythonEngine::PyStatus PythonEngine::LoadModule(std::string&& module_name) {
 	return PythonSuccess;
 }
 
-PythonEngine::PyStatus PythonEngine::LoadFunction(std::string&& function_name, const std::string& module_name) {
+PythonEngine::PyStatus PythonEngine::LoadFunction(std::string&& function_name, const std::string& module_name) noexcept {
 	PyObject* p_func = PyObject_GetAttrString(p_modules[module_name].module_handle, function_name.c_str());
 	if (p_func == nullptr)
 		return PythonLoadFunctionError;
