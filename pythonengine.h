@@ -5,20 +5,19 @@
 #include <map>
 #include <vector>
 #include <type_traits>
-#include <any>
 
 class PythonEngine;
 
 template<class T>
-std::any operator+(std::any a, T&& b) {
-	PyList_Append(std::any_cast<PyObject*>(a), PythonEngine::PyType_FromType(std::forward<T>(b)));
+PyObject& operator+(PyObject& a, const T& b) noexcept {
+	PyList_Append(&a, PythonEngine::PyType_FromType<T>(b));
 	return a;
 }
 
 class PythonEngine {
 public:
-	~PythonEngine();
-	static PythonEngine& getInstance();
+	~PythonEngine() noexcept;
+	static PythonEngine& getInstance() noexcept;
 	enum PyStatus : int {
 		PythonSuccess = 0,
 		PythonHomeNotFound,
@@ -28,19 +27,19 @@ public:
 		PythonLoadFunctionError,
 		PythonAlreadyInitialized
 	};
-	PyStatus Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules = std::vector<std::pair<std::string, PyObject* (*)(void)>>());
-	PyStatus LoadModule(std::string&& module_name);
-	PyStatus LoadFunction(std::string&& function_name, const std::string& module_name);
+	PyStatus Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules = std::vector<std::pair<std::string, PyObject* (*)(void)>>()) noexcept;
+	PyStatus LoadModule(std::string&& module_name) noexcept;
+	PyStatus LoadFunction(std::string&& function_name, const std::string& module_name) noexcept;
 	template<typename ... T>
-	PyObject* CallFunction(const std::string& function_name, const std::string& module_name, const T&... args) {
+	PyObject* CallFunction(const std::string& function_name, const std::string& module_name, const T&... args) noexcept {
 		PyObject* p_args = PyList_New(0);
-		(std::any(p_args) + ... + args);
+		(*p_args + ... + args);
 		PyObject* p_func = p_modules[module_name].p_functions[function_name];
 		return PyObject_CallObject(p_func, PyList_AsTuple(p_args));
 	};
 
 	template<typename T>
-	static T PyType_AsType(PyObject* py_data) {
+	static T PyType_AsType(PyObject* py_data) noexcept {
 		if constexpr (std::is_same_v<T, double>)
 			return PyFloat_AsDouble(py_data);
 		else if constexpr (std::is_same_v<T, bool>)
@@ -52,7 +51,7 @@ public:
 		return T();
 	};
 	template<typename T>
-	static std::vector<T> PyType_AsVector(PyObject* py_data) {
+	static std::vector<T> PyType_AsVector(PyObject* py_data) noexcept {
 		std::vector<T> vec;
 		const size_t size = PyList_Size(py_data);
 		vec.reserve(size);
@@ -68,22 +67,24 @@ public:
 	};
 
 	template<typename T>
-	static PyObject* PyType_FromType(T data) {
-		using T_ = std::remove_reference_t<std::remove_cv_t<T>>;
+	static PyObject* PyType_FromType(const T& data) noexcept {
+		using T_ = std::remove_reference_t<std::remove_cv_t<std::remove_pointer_t<std::remove_all_extents_t<T>>>>;
 		if constexpr (std::is_same_v<T_, double>)
 			return PyFloat_FromDouble(data);
 		else if constexpr (std::is_same_v<T_, bool>)
 			return PyBool_FromLong(static_cast<long>(data));
 		else if constexpr (std::is_same_v<T_, int>)
 			return PyLong_FromLong(static_cast<long>(data));
-		else if constexpr (std::is_same_v<T_, char*> || std::is_same_v<T_, const char*>)
+		else if constexpr (std::is_same_v<T_, char>)
 			return (PyObject*)(PyUnicode_FromString(data));
+		else if constexpr (std::is_same_v<T_, wchar_t>)
+			return (PyObject*)(PyUnicode_FromWideChar(data, wcslen(data)));
 		else if constexpr (std::is_same_v<T_, std::string>)
 			return (PyObject*)(PyUnicode_FromString(data.c_str()));
 		return Py_None;
 	}
 	template<typename T>
-	static PyObject* PyType_FromType(std::vector<T> data) {
+	static PyObject* PyType_FromType(std::vector<T>&& data) noexcept {
 		PyObject* p_list = PyList_New(data.size());
 		for (int i = 0; i < data.size(); ++i)
 			PyList_SetItem(p_list, i, PyType_FromType(data[i]));
@@ -91,7 +92,7 @@ public:
 	}
 
 private:
-	PythonEngine();
+	PythonEngine() noexcept;
 	PythonEngine(PythonEngine const&) = delete;
 	void operator=(PythonEngine const&) = delete;
 	PythonEngine(PythonEngine &&) = delete;
