@@ -1,5 +1,6 @@
 #pragma once
 
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include <string>
 #include <map>
@@ -46,7 +47,7 @@ public:
 			return static_cast<bool>(PyObject_IsTrue(py_data));
 		else if constexpr (std::is_same_v<T, int>)
 			return static_cast<int>(PyLong_AsLong(py_data));
-		else if constexpr (std::is_same_v<T, char*> || std::is_same_v<T, std::string>)
+		else if constexpr (std::is_same_v<T, const char*> || std::is_same_v<T, std::string>)
 			return PyUnicode_AsUTF8(py_data);
 		return T();
 	};
