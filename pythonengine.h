@@ -77,11 +77,11 @@ public:
 		else if constexpr (std::is_same_v<T_, int>)
 			return PyLong_FromLong(static_cast<long>(data));
 		else if constexpr (std::is_same_v<T_, char>)
-			return (PyObject*)(PyUnicode_FromString(data));
+			return PyUnicode_FromString(data);
 		else if constexpr (std::is_same_v<T_, wchar_t>)
-			return (PyObject*)(PyUnicode_FromWideChar(data, wcslen(data)));
+			return PyUnicode_FromWideChar(data, wcslen(data));
 		else if constexpr (std::is_same_v<T_, std::string>)
-			return (PyObject*)(PyUnicode_FromString(data.c_str()));
+			return PyUnicode_FromString(data.c_str());
 		return Py_None;
 	}
 	template<typename T>
