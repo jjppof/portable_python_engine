@@ -82,10 +82,12 @@ public:
 			return PyUnicode_FromWideChar(data, wcslen(data));
 		else if constexpr (std::is_same_v<T_, std::string>)
 			return PyUnicode_FromString(data.c_str());
+		else if constexpr (is_std_vector<T>::value)
+			return PyType_FromVector(data);
 		return Py_None;
 	}
 	template<typename T>
-	static PyObject* PyType_FromType(std::vector<T>&& data) noexcept {
+	static PyObject* PyType_FromVector(const std::vector<T>& data) noexcept {
 		PyObject* p_list = PyList_New(data.size());
 		for (int i = 0; i < data.size(); ++i)
 			PyList_SetItem(p_list, i, PyType_FromType(data[i]));
