@@ -10,8 +10,9 @@
 class PythonEngine;
 
 template<class T>
-PyObject& operator+(PyObject& a, const T& b) noexcept {
-	PyList_Append(&a, PythonEngine::PyType_FromType<T>(b));
+decltype(auto) operator+(std::pair<PyObject*, int>& a, const T& b) noexcept {
+	PyTuple_SetItem(a.first, a.second, PythonEngine::PyType_FromType<T>(b));
+	++a.second;
 	return a;
 }
 
@@ -19,7 +20,7 @@ class PythonEngine {
 public:
 	~PythonEngine() noexcept;
 	static PythonEngine& getInstance() noexcept;
-	enum PyStatus : int {
+	enum class PyStatus : int {
 		PythonSuccess = 0,
 		PythonHomeNotFound,
 		PythonInitializeError,
@@ -29,12 +30,13 @@ public:
 		PythonAlreadyInitialized
 	};
 	PyStatus Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules = std::vector<std::pair<std::string, PyObject* (*)(void)>>()) noexcept;
-	PyStatus LoadModule(std::string&& module_name) noexcept;
-	PyStatus LoadFunction(std::string&& function_name, const std::string& module_name) noexcept;
+	PyStatus LoadModule(const std::string& module_name) noexcept;
+	PyStatus LoadFunction(const std::string& function_name, const std::string& module_name) noexcept;
 	template<typename ... T>
 	PyObject* CallFunction(const std::string& function_name, const std::string& module_name, const T&... args) noexcept {
-		PyObject* p_args = PyList_New(0);
-		(*p_args + ... + args);
+		const std::size_t args_size = sizeof...(args);
+		PyObject* p_args = PyTuple_New(args_size);
+		(std::pair<PyObject*, int>(p_args, 0) + ... + args);
 		PyObject* p_func = p_modules[module_name].p_functions[function_name];
 		return PyObject_CallObject(p_func, PyList_AsTuple(p_args));
 	};

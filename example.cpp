@@ -2,7 +2,7 @@
 #include <utility>
 
 int main() {
-	static PythonEngine& handle = PythonEngine::getInstance();
+	decltype(auto) handle = PythonEngine::getInstance();
 	handle.Initialize();
 	handle.LoadModule("example");
 	handle.LoadFunction("my_function", "example");
