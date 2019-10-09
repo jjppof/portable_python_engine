@@ -1,6 +1,5 @@
 #include "pythonengine.h"
 #include <filesystem>
-#include <cstdlib>
 
 #define PYTHON_HOME "C:\\Python36\\"
 #define WIDER2(x) L ## x
