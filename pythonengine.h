@@ -29,7 +29,7 @@ public:
 		PythonLoadFunctionError,
 		PythonAlreadyInitialized
 	};
-	PyStatus Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules = std::vector<std::pair<std::string, PyObject* (*)(void)>>()) noexcept;
+	PyStatus Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>* modules = nullptr) noexcept;
 	PyStatus LoadModule(const std::string& module_name) noexcept;
 	PyStatus LoadFunction(const std::string& function_name, const std::string& module_name) noexcept;
 	template<typename ... T>

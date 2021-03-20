@@ -21,14 +21,16 @@ PythonEngine& PythonEngine::getInstance() noexcept {
 	return instance;
 }
 
-PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>& modules) noexcept {
+PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::string, PyObject* (*)(void)>>* modules) noexcept {
 	if (Py_IsInitialized()) {
-		for (decltype(auto) module : modules) {
-			PyImport_AddModule(module.first.c_str());
-			PyObject* pyModule = module.second();
-			PyObject* sys_modules = PyImport_GetModuleDict();
-			PyDict_SetItemString(sys_modules, module.first.c_str(), pyModule);
-			Py_DECREF(pyModule);
+		if (modules != nullptr) {
+			for (decltype(auto) module : *modules) {
+				PyImport_AddModule(module.first.c_str());
+				PyObject* pyModule = module.second();
+				PyObject* sys_modules = PyImport_GetModuleDict();
+				PyDict_SetItemString(sys_modules, module.first.c_str(), pyModule);
+				Py_DECREF(pyModule);
+			}
 		}
 		return PyStatus::PythonAlreadyInitialized;
 	}
@@ -38,8 +40,10 @@ PythonEngine::PyStatus PythonEngine::Initialize(std::vector<std::pair<std::strin
 	else
 		return PyStatus::PythonHomeNotFound;
 
-	for (decltype(auto) module : modules)
-		PyImport_AppendInittab(module.first.c_str(), module.second);
+	if (modules != nullptr) {
+		for (decltype(auto) module : *modules)
+			PyImport_AppendInittab(module.first.c_str(), module.second);
+	}
 
 	Py_Initialize();
 	wchar_t* argv[1] = { L"" };
